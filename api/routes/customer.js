@@ -1,6 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
+const messages = require('../../messages/messages');
+const errorTemplate = require('../../templates/errorTemplate');
+const customerTemplate = require('../../templates/successTemplate');
+const customerDeletedTemplate = require('../../templates/successTemplate');
 const customer = require('../model/customer');
 const Customer = require("../model/customer");
 
@@ -8,129 +12,117 @@ const Customer = require("../model/customer");
 //get list
 router.get("/", (req,res,next) => {
     customer.find({})
-    .select("firstName lastName phoneNumber _id")
+    .select("firstName lastName motorcycle _id")
     .exec()
     .then((customers) => {
         if(customers.length === 0){
+             /* 406 Not Acceptable
+            This response is sent when the web server, after performing server-driven
+            content negotiation, doesn't find any content that conforms to the criteria
+            given by the user agent. */
             res.status(406).json({
-                message: "No customers listed. Add an customer to the list."
+                message: messages.empty_customers_list
             });
         }
         res.status(200).json({
-            message: "customers SUCCESSFULLY retrieved",
+            message: messages.customer_list_retrieved,
             customers,
         });
     })
     .catch(err =>{
-        console.log(err.message);
-        res.status(501).json({
-            error:{
-                message: err.message,
-                status: err.status,
-            }
-        })
+        return errorTemplate(res, err, messages.get_all_failed, 500);
     });
 });
 
 //post or create
-router.post("/",(req,res,next) => {
-    const newCustomer = new Customer({
-        _id: mongoose.Types.ObjectId(),
+router.post("/", (req,res,next) =>{
+    Customer.find({
         firstName: req.body.firstName,
         lastName: req.body.lastName,
-        phoneNumber: req.body.phoneNumber,
-    });
-    newCustomer.save().then(result => {
-        console.log(result);
-        res.status(201).json({
-            message: "New customer POSTED to database",
-            customer:{
-                Name: result.firstName,
-                Surname: result.lastName,
-                Contact: result.phoneNumber,
-                id: result.id,
-                metadata:{
-                    method: req.method,
-                    host: req.hostname,
-                }
-            }
-        })
+        motorcycle: req.body.motorcycle,
     })
-    .catch(err =>{
-        console.log(err.message);
-        res.status(501).json({
-            error:{
-                message: err.message,
-                status: err.status,
-            }
+    // .exec() not necessary for post aka save because these are true promises.
+    .then(result => {
+        console.log(result);
+        if(result.length > 0){
+            return res.status(406).json({
+                message: messages.customer_exists_error
+            })
+        }
+        const newCustomer = new Customer({
+            _id: mongoose.Types.ObjectId(),
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            motorcycle: req.body.motorcycle,
+        });
+        newCustomer.save()
+        .then(result => {
+            customerTemplate(res, result, messages.new_entry_posted, 200);
         })
+        .catch(err => {
+            return errorTemplate(res, err, messages.post_failed, 500);
+        });
+    })
+    .catch(err => {
+        return errorTemplate(res, err, messages.post_failed,500);
     });
 });
 
 //get by id
 router.get("/:customerId",(req,res,next)=>{
     const customerId = req.params.customerId;
-    Customer.findById({
-        _id:customerId
-    }).then(result => {
-        res.status(200).json({
-            message: `Customer SUCCESSFULLY retreived.`,
-            customer:{
-                firstName: result.firstName,
-                Surname: result.lastName,
-                Contact: result.phoneNumber,
-                id: result.id,
-                metadata:{
-                    method: req.method,
-                    host: req.hostname,
-                }
-            }
-        })
+    Customer.findById(customerId)
+    .populate('motorcycle')
+    .exec()
+    .then(result => {
+        if(!result){
+            console.log(result);
+            return res.status(404).json({
+                message: messages.entry_not_found
+            })
+        }
+        customerTemplate(res, result, messages.customer_retrieved, 200);
     })
     .catch(err =>{
-        res.status(500).json({
-            error:{
-                message: err.message,
-                status: err.status,
-            }
-        })
+        return errorTemplate(res, err, messages.get_id_failed, 500);
     });
 });
 
 //patch or update
+/* I do not understand why customer results are not coming back. I can use req.body.----
+to display what the input was but cannot show what the new database entry looks like with
+resut.----- */
 router.patch("/:customerId",(req,res,next)=>{
     const customerId = req.params.customerId;
     const updatedCustomer = {
         firstName: req.body.firstName,
         lastName: req.body.lastName,
-        phoneNumber: req.body.phoneNumber,
+        motorcycle: req.body.motorcycle,
     };
     Customer.updateOne({
         _id:customerId
     }, {
         $set:updatedCustomer
-    }).then(result => {
-        res.status(200).json({
-            message: "Customer UPDATED",
+    })
+    .exec()
+    .then(result => {
+        customerTemplate(res, result, messages.entry_updated, 200);
+        /* res.status(200).json({
+            message: messages.entry_updated,
             customer:{
                 Name: result.firstName,
                 Surname: result.lastName,
-                Contact: result.phoneNumber,
+                motorcycle: result.motorcycle,
                 id: result.id,
                 metadata:{
                     method: req.method,
                     host: req.hostname,
                 }
             }
-        })
+        }) */
     })
     .catch(err =>{
-        res.status(500).json({
-            error:{
-                message: err.message,
-                status: err.status,
-            }
-        })
+        return errorTemplate(res, err, messages.update_failed, 500);
     });
 });
 
@@ -140,34 +132,19 @@ router.delete("/:customerId",(req,res,next)=>{
     const deleteCustomer = {
         firstName: req.body.firstName,
         lastName: req.body.lastName,
-        phoneNumber: req.body.phoneNumber,
+        motorcycle: req.body.motorcycle,
     };
     Customer.findByIdAndDelete({
         _id:customerId
     }, {
         $set:deleteCustomer
-    }).then(result => {
-        res.status(200).json({
-            message: "Customer successfully DELETED",
-            customer:{
-                Name: result.firstName,
-                Surname: result.lastName,
-                Contact: result.phoneNumber,
-                id: result.id,
-                metadata:{
-                    method: req.method,
-                    host: req.hostname,
-                }
-            }
-        })
+    })
+    .exec()
+    .then(result => {
+        customerDeletedTemplate(res, result, messages.entry_deleted, 200);
     })
     .catch(err =>{
-        res.status(500).json({
-            error:{
-                message: err.message,
-                status: err.status,
-            }
-        })
+        return errorTemplate(res, err, messages.delete_failed, 500);
     });
 });
 

@@ -1,14 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
+const errorTemplate = require('../../templates/errorTemplate');
+const motorcycleTemplate = require('../../templates/successTemplate');
+const messages = require('../../messages/messages');
 const motorcycle = require('../model/motorcycle');
 const Motorcycle = require("../model/motorcycle");
 
-
-/* router.get("/",(req,res,next)=>{
-    res.json({message:"Motorcycles - GET"
-    })
-}); */
 
 router.get("/", (req,res,next) => {
     motorcycle.find({})
@@ -17,22 +15,16 @@ router.get("/", (req,res,next) => {
     .then((motorcycles) => {
         if(motorcycles.length === 0){
             res.status(406).json({
-                message: "No motorcycles listed. Add motorcycles to list."
+                message: messages.empty_motorcycyles_list
             });
         }
         res.status(200).json({
-            message: "Motorcycles SUCCESSFULLY retrieved",
+            message: messages.motorcycle_list_retrieved,
             motorcycles,
         });
     })
     .catch(err =>{
-        console.log(err.message);
-        res.status(501).json({
-            error:{
-                message: err.message,
-                status: err.status,
-            }
-        })
+        return errorTemplate(res, err, messages.get_all_failed, 500);
     });
 })
 
@@ -47,12 +39,8 @@ router.post("/",(req,res,next) => {
     .then(result => {
         console.log(result);
         if(result.length > 0){
-            /* 406 Not Acceptable
-            This response is sent when the web server, after performing server-driven
-            content negotiation, doesn't find any content that conforms to the criteria
-            given by the user agent. */
             return res.status(406).json({
-                message: "Motorcycle is already listed"
+                message: messages.motorcycle_exists_error
             })
         }
         const newMotorcycle = new Motorcycle({
@@ -61,59 +49,36 @@ router.post("/",(req,res,next) => {
             make: req.body.make,
             model: req.body.model,
         });
-        newMotorcycle.save().then(result => {
-            console.log(result);
-            res.status(201).json({
-                message: "Motorcycle POSTED to database",
-    
-            })
+        newMotorcycle.save()
+        .then(result => {
+            motorcycleTemplate(res, result, messages.new_entry_posted, 200);
         })
         .catch(err =>{
-            console.log(err.message);
-            res.status(501).json({
-                error:{
-                    message: err.message,
-                    status: err.status,
-                }
-            })
+            return errorTemplate(res, err, messages.post_failed, 500);
         });
     })
     .catch(err =>{
-        console.log(err.message);
-        res.status(500).json({
-            error:{
-                message: `Unable to save motorcycle with year: ${req.body.year}, make: ${req.body.make}, model:${req.body.year} provided.`
-            }
-        })
-    })
+        return errorTemplate(res, err, messages.post_failed, 500);
+    });
 });
 
-router.get("/:motorcycleId",(req,res,next)=>{
+//get by /:id
+router.get("/:motorcycleId", (req,res,next) => {
     const motorcycleId = req.params.motorcycleId;
-    Motorcycle.findById({
-        _id:motorcycleId
-    }).then(result => {
-        res.status(200).json({
-            message: `Motorcycle id:${motorcycleId} SUCCESSFULLY retreived.`,
-            motorcycle:{
-                year: result.year,
-                make: result.make,
-                model: result.model,
-                id: result.id,
-                metadata:{
-                    method: req.method,
-                    host: req.hostname,
-                }
-            }
-        })
+    Motorcycle.findById(motorcycleId)
+    // .populate()
+    .exec()
+    .then(result => {
+        if(motorcycleId !== result.id){
+            console.log(result);
+            return res.status(404).json({
+                message: messages.entry_not_found
+            })
+        }
+        motorcycleTemplate(res, result, messages.motorcycle_retrieved, 200);
     })
-    .catch(err =>{
-        res.status(500).json({
-            error:{
-                message: err.message,
-                status: err.status,
-            }
-        })
+    .catch(err => {
+        return errorTemplate(res, err, messages.get_id_failed, 500);
     });
 });
 
@@ -129,28 +94,13 @@ router.patch("/:motorcycleId",(req,res,next)=>{
         _id:motorcycleId
     }, {
         $set:updatedMotorcycle
-    }).then(result => {
-        res.status(200).json({
-            message: "Motorcycle UPDATED",
-            motorcycle:{
-                year: result.year,
-                make: result.make,
-                model: result.model,
-                id: result.id,
-                metadata:{
-                    method: req.method,
-                    host: req.hostname,
-                }
-            }
-        })
+    })
+    .exec()
+    .then(result => {
+        motorcycleTemplate(res, result, messages.entry_updated, 200);
     })
     .catch(err =>{
-        res.status(500).json({
-            error:{
-                message: err.message,
-                status: err.status,
-            }
-        })
+        return errorTemplate(res, err, messages.update_failed, 500);
     });
 });
 
@@ -166,28 +116,13 @@ router.delete("/:motorcycleId",(req,res,next)=>{
         _id:motorcycleId
     }, {
         $set:deleteMotorcycle
-    }).then(result => {
-        res.status(200).json({
-            message: "Motorcycle successfully DELETED",
-            motorcycle:{
-                year: result.year,
-                make: result.make,
-                model: result.model,
-                id: result.id,
-                metadata:{
-                    method: req.method,
-                    host: req.hostname,
-                }
-            }
-        })
+    })
+    .exec()
+    .then(result => {
+        motorcycleTemplate(res, result, messages.entry_deleted, 200);
     })
     .catch(err =>{
-        res.status(500).json({
-            error:{
-                message: err.message,
-                status: err.status,
-            }
-        })
+        return errorTemplate(res, err, messages.delete_failed, 500);
     });
 });
 

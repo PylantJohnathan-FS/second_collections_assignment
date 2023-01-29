@@ -9,8 +9,10 @@ const customerSchema = mongoose.Schema({
         type: String,
         required: true,
     },
-    phoneNumber: {
-        type: String,
+    motorcycle: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Motorcycle',
+        strictPopulate: false,
         required: true,
     },
 });

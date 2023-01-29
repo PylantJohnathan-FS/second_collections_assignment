@@ -8,11 +8,11 @@ const customerDeletedTemplate = require('../../templates/successTemplate');
 const customer = require('../model/customer');
 const Customer = require("../model/customer");
 
-
-//get list
+//get all
 router.get("/", (req,res,next) => {
     customer.find({})
-    .select("firstName lastName motorcycle _id")
+    .populate("motorcycle")
+    .select("firstName lastName motorcycle")
     .exec()
     .then((customers) => {
         if(customers.length === 0){
@@ -72,7 +72,8 @@ router.post("/", (req,res,next) =>{
 router.get("/:customerId",(req,res,next)=>{
     const customerId = req.params.customerId;
     Customer.findById(customerId)
-    .populate('motorcycle')
+    .populate("motorcycle")
+    .select("firstName lastName motorcycle")
     .exec()
     .then(result => {
         if(!result){
@@ -104,6 +105,7 @@ router.patch("/:customerId",(req,res,next)=>{
     }, {
         $set:updatedCustomer
     })
+    .populate("motorcycle")
     .exec()
     .then(result => {
         customerTemplate(res, result, messages.entry_updated, 200);
@@ -139,6 +141,8 @@ router.delete("/:customerId",(req,res,next)=>{
     }, {
         $set:deleteCustomer
     })
+    .populate("motorcycle")
+    .select("firstName lastName motorcycle")
     .exec()
     .then(result => {
         customerDeletedTemplate(res, result, messages.entry_deleted, 200);

@@ -7,10 +7,10 @@ const messages = require('../../messages/messages');
 const motorcycle = require('../model/motorcycle');
 const Motorcycle = require("../model/motorcycle");
 
-
+//get all
 router.get("/", (req,res,next) => {
     motorcycle.find({})
-    .select("year make model _id")
+    .select("year make model")
     .exec()
     .then((motorcycles) => {
         if(motorcycles.length === 0){
@@ -35,6 +35,7 @@ router.post("/",(req,res,next) => {
         make: req.body.make,
         model: req.body.model,
     })
+    .select("year make model")
     .exec()
     .then(result => {
         console.log(result);
@@ -67,6 +68,7 @@ router.get("/:motorcycleId", (req,res,next) => {
     const motorcycleId = req.params.motorcycleId;
     Motorcycle.findById(motorcycleId)
     // .populate()
+    .select("year make model")
     .exec()
     .then(result => {
         if(motorcycleId !== result.id){
@@ -95,6 +97,7 @@ router.patch("/:motorcycleId",(req,res,next)=>{
     }, {
         $set:updatedMotorcycle
     })
+    .select("year make model")
     .exec()
     .then(result => {
         motorcycleTemplate(res, result, messages.entry_updated, 200);
@@ -117,6 +120,7 @@ router.delete("/:motorcycleId",(req,res,next)=>{
     }, {
         $set:deleteMotorcycle
     })
+    .select("year make model")
     .exec()
     .then(result => {
         motorcycleTemplate(res, result, messages.entry_deleted, 200);

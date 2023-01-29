@@ -11,8 +11,8 @@ router.get("/", (req,res,next) => {
     .select("firstName lastName phoneNumber _id")
     .exec()
     .then((customers) => {
-        if (customers < 1) {
-            res.status(200).json({
+        if(customers.length === 0){
+            res.status(406).json({
                 message: "No customers listed. Add an customer to the list."
             });
         }

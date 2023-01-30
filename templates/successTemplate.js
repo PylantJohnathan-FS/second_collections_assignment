@@ -1,5 +1,3 @@
-const customer = require('../api/model/customer');
-
 const customerTemplate = (res, result, message, status) => {
     return res.status(status).json({
         message: message,

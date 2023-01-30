@@ -21,4 +21,12 @@ const customerDeletedTemplate = (res, result, message, status) => {
     });
 };
 
-module.exports = customerTemplate, customerDeletedTemplate;
+const motorcycleTemplate = (res, result, message, status) => {
+    return res.status(status).json({
+        message: message,
+        motorcycle: result,
+        status: status,
+    });
+};
+
+module.exports = customerTemplate, customerDeletedTemplate, motorcycleTemplate;

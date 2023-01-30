@@ -57,7 +57,7 @@ router.post("/", (req,res,next) =>{
         });
         newCustomer.save()
         .then(result => {
-            customerTemplate(res, result, messages.new_entry_posted, 200);
+            customerTemplate(res, result, messages.new_entry_posted, 201);
         })
         .catch(err => {
             return errorTemplate(res, err, messages.post_failed, 500);
@@ -76,12 +76,12 @@ router.get("/:customerId",(req,res,next)=>{
     .select("firstName lastName motorcycle")
     .exec()
     .then(result => {
-        if(!result){
+        /* if(!result){
             console.log(result);
             return res.status(404).json({
                 message: messages.entry_not_found
             })
-        }
+        } */
         customerTemplate(res, result, messages.customer_retrieved, 200);
     })
     .catch(err =>{

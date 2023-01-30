@@ -52,7 +52,7 @@ router.post("/",(req,res,next) => {
         });
         newMotorcycle.save()
         .then(result => {
-            motorcycleTemplate(res, result, messages.new_entry_posted, 200);
+            motorcycleTemplate(res, result, messages.new_entry_posted, 201);
         })
         .catch(err =>{
             return errorTemplate(res, err, messages.post_failed, 500);
@@ -67,11 +67,10 @@ router.post("/",(req,res,next) => {
 router.get("/:motorcycleId", (req,res,next) => {
     const motorcycleId = req.params.motorcycleId;
     Motorcycle.findById(motorcycleId)
-    // .populate()
     .select("year make model")
     .exec()
     .then(result => {
-        if(motorcycleId !== result.id){
+        if(!result){
             console.log(result);
             return res.status(404).json({
                 message: messages.entry_not_found
@@ -123,6 +122,12 @@ router.delete("/:motorcycleId",(req,res,next)=>{
     .select("year make model")
     .exec()
     .then(result => {
+        if(motorcycleId !== result.id){
+            console.log(result);
+            return res.status(404).json({
+                message: messages.entry_not_found
+            })
+        }
         motorcycleTemplate(res, result, messages.entry_deleted, 200);
     })
     .catch(err =>{
